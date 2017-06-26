@@ -1,4 +1,5 @@
 endurance = 15 min
 payload = 2.7 N
 build_time = 9 hr
+range = 1.5 km
 video = False

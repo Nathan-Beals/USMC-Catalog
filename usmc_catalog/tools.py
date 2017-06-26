@@ -8,7 +8,7 @@ class CapacityConvError(ConversionError):
 
 def convert_unit(val, unit_start, unit_end, voltage=None):
     weight_per_newton = {'N': 1, 'lbf': 0.2248, 'kg': 1/9.81}
-    length_per_meter = {'m': 1, 'cm': 100, 'in': 39.37, 'ft': 3.281}
+    length_per_meter = {'m': 1, 'cm': 100, 'in': 39.37, 'ft': 3.281, 'km': 0.001, 'mi': 0.000621}
     if voltage is not None:
         capacity_per_Wh = {'Wh': 1, 'mAh': float(voltage)/1000}
     else:

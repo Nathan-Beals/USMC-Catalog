@@ -7,11 +7,13 @@ except ImportError:
 import ttk
 import tkFont
 from PIL import ImageTk, Image
-
 from winplace import get_win_place
 import os
 from vehicle import Vehicle
 import tools
+import tkFileDialog
+from distutils.dir_util import copy_tree
+from distutils.errors import DistutilsFileError
 
 
 class CatalogGUI(ttk.Frame):
@@ -86,7 +88,8 @@ class AlternativesSheet(ttk.Frame):
     def __init__(self, master):
         ttk.Frame.__init__(self, master, width=500, height=300, padding='10 0 10 0', borderwidth=1, relief='ridge')
         self.master = master
-        self.current_object_selection = IntVar()
+        self.current_vehicle_selection = "None"
+        self.vehicle_frames = {}
 
         # Load available vehicles
         self.alternatives = []
@@ -106,11 +109,13 @@ class AlternativesSheet(ttk.Frame):
                     resized = original.resize(size, Image.ANTIALIAS)
                     image = ImageTk.PhotoImage(resized)
                 # Parse vehicle attribute text file and extract vehicle attribute values
-                elif filename.endswith(".txt"):
+                elif "data.txt" in filename:
                     with open(vehicle_path + filename) as f:
                         vehicle_attrs = [x.strip('/n').replace(' ', '') for x in f.readlines()]
                         attr_names = [attr_line[:attr_line.find("=")] for attr_line in vehicle_attrs]
                         attr_vals = [re.findall(r"[-+]?\d*\.\d+|\d+", attr_line) for attr_line in vehicle_attrs]
+                        print attr_names
+                        print attr_vals
                         for indx, name in enumerate(attr_names):
                             if name == 'video':
                                 has_video = vehicle_attrs[indx][vehicle_attrs[indx].find("=")+1:]
@@ -128,6 +133,7 @@ class AlternativesSheet(ttk.Frame):
     def resort_alt_sheet(self):
         active_filters = self.master.master.master.active_filter_frame.active_filters
         sortby_attr = self.master.master.master.filter_control_frame.sortby_attr
+        self.vehicle_frames = {}
 
         for widget in self.children.values():
             widget.destroy()
@@ -145,6 +151,20 @@ class AlternativesSheet(ttk.Frame):
         column = 0
         for count, alternative in enumerate(feasible_alternatives):
             display_frame = alternative.display_frame(self)
+
+            def bind_widget(w):
+                if not w.children.values() and w.winfo_class() != "TButton":
+                    if w.winfo_class() != "TButton":
+                        w.bind("<Button-1>", lambda event, selected_vehicle=alternative: self.vehicle_selected(event, selected_vehicle))
+                else:
+                    if w.winfo_class() != "TButton":
+                        w.bind("<Button-1>", lambda event, selected_vehicle=alternative: self.vehicle_selected(event, selected_vehicle))
+                    for child in w.children.values():
+                        bind_widget(child)
+
+            bind_widget(display_frame)
+
+            self.vehicle_frames[alternative.name] = display_frame
 
             if count % 2 != 0:
                 display_frame.grid(column=column, row=row, pady=10)
@@ -174,6 +194,33 @@ class AlternativesSheet(ttk.Frame):
                 elif this_filter[1] == 'max' and not alternative_attr_val <= filter_val_metric:
                     return False
             return True
+
+    def vehicle_selected(self, event, vehicle):
+        if self.current_vehicle_selection == vehicle.name:
+            # Remove border and set current selection to none
+            previously_selected_frame = self.vehicle_frames[self.current_vehicle_selection]
+            self.raise_border(previously_selected_frame)
+            self.current_vehicle_selection = "None"
+        elif self.current_vehicle_selection == "None":
+            # Add border and set current selection to selected vehicle
+            self.current_vehicle_selection = vehicle.name
+            currently_selected_frame = self.vehicle_frames[self.current_vehicle_selection]
+            self.sink_border(currently_selected_frame)
+        else:
+            # Remove border from previously selected frame
+            previously_selected_frame = self.vehicle_frames[self.current_vehicle_selection]
+            self.raise_border(previously_selected_frame)
+            # Change value of current vehicle selection to new vehicle name
+            self.current_vehicle_selection = vehicle.name
+            # Add border to selected frame
+            currently_selected_frame = self.vehicle_frames[self.current_vehicle_selection]
+            self.sink_border(currently_selected_frame)
+
+    def raise_border(self, frame):
+        frame.configure(relief='raised')
+
+    def sink_border(self, frame):
+        frame.configure(relief='sunken')
 
 
 class FilterControls(ttk.Frame):
@@ -314,12 +361,77 @@ class Buttons(ttk.Frame):
     def __init__(self, master):
         ttk.Frame.__init__(self, master, padding=3)
         self.master = master
+        self.overwrite_decision = 'cancel'
 
         self.export_vehicle_button = ttk.Button(self, text='Export Vehicle', command=self.export_vehicle)
         self.export_vehicle_button.pack()
 
     def export_vehicle(self):
-        return
+        current_vehicle_name = self.master.vehicle_alternative_frame.interior.current_vehicle_selection
+
+        try:
+            # Obtain destination directory from user
+            dir_opt = {'initialdir': 'C:\\', 'mustexist': False, 'parent': self.master, 'title': 'Choose save directory.'}
+            dest_dir = tkFileDialog.askdirectory(**dir_opt) + '/' + current_vehicle_name
+            self.lift()
+
+            # If dest_dir already exists ask the user whether they want to overwrite
+            if os.path.isdir(dest_dir):
+                message = "A directory named '" + current_vehicle_name + \
+                          "' already exists in the specified location. Do you wish to overwrite?"
+                oc = OverwriteConfirm(self, message)
+                self.wait_window(oc)
+                if self.overwrite_decision == "cancel":
+                    return
+
+            # Obtain source directory
+            execute_dir = os.path.dirname(os.path.abspath(__file__))
+            src_dir = os.path.dirname(execute_dir) + '/vehicles/' + current_vehicle_name
+
+            # Copy src_dir to dest_dir
+            copy_tree(src_dir, dest_dir)
+        except (DistutilsFileError, TypeError):
+            pass
+
+
+class OverwriteConfirm(Toplevel):
+    """
+    This class defines a Toplevel window which may be called to ask the user to confirm his decision before performing
+    an irreversible task (such as saving an object to a database or modifying an existing database object). When the
+    user selects either "Confirm" or "Cancel", the value of the variable self.master.overwrite_decision variable is
+    changed which can then be used to control flow in the master frame.
+    """
+    def __init__(self, master, message_text):
+        Toplevel.__init__(self, master)
+        self.master = master
+        self.resizable(width=FALSE, height=FALSE)
+
+        # Place window
+        xpos, ypos = get_win_place(self)
+        self.geometry('+%d+%d' % (xpos, ypos))
+
+        self.mainframe = ttk.Frame(self, padding=5)
+        self.mainframe.pack()
+
+        # Create confirmation message, replace confirmation button, and cancel button
+        self.message_text = message_text
+        self.message = ttk.Label(self.mainframe, text=self.message_text, wraplength=300)
+        self.replace_button = ttk.Button(self.mainframe, text='Confirm',
+                                         command=lambda: self.overwrite_decision('confirmed'))
+        self.cancel_button = ttk.Button(self.mainframe, text='Cancel',
+                                        command=lambda: self.overwrite_decision('cancel'))
+
+        # Grid widgets
+        self.message.pack(expand=YES, padx=15, pady=5)
+        self.replace_button.pack(side=RIGHT)
+        self.cancel_button.pack(side=RIGHT)
+
+    def overwrite_decision(self, result):
+        if result == 'confirmed':
+            self.master.overwrite_decision = 'confirmed'
+        else:
+            self.master.overwrite_decision = 'cancel'
+        self.destroy()
 
 
 def main():
