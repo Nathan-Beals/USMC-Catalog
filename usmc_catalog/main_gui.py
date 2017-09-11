@@ -67,6 +67,17 @@ class VertScrolledFrame(ttk.Frame):
         self.interior.bind('<Configure>', self._configure_interior)
         self.canvas.bind('<Configure>', self._configure_canvas)
 
+        # Set initial height of interior frame
+        num_alts = len(self.interior.alternatives)
+        if num_alts % 2 == 0:
+            num_rows = num_alts / 2
+        else:
+            num_rows = (num_alts+1) / 2
+        print self.interior.winfo_reqheight()
+        two_row_height = 2 * (self.interior.winfo_reqheight()/num_rows)
+        print two_row_height
+        self.canvas.config(height=self.interior.winfo_reqheight())
+
     # track changes to the canvas and frame width and sync them,
     # also updating the scrollbar
     def _configure_interior(self, event):
@@ -76,6 +87,8 @@ class VertScrolledFrame(ttk.Frame):
         if self.interior.winfo_reqwidth() != self.canvas.winfo_width():
             # update the canvas's width to fit the inner frame
             self.canvas.config(width=self.interior.winfo_reqwidth())
+        # if self.interior.winfo_reqheight() != self.canvas.winfo_height():
+        #     self.canvas.config(height=self.interior.winfo_reqheight())
 
     def _configure_canvas(self, event):
         if self.interior.winfo_reqwidth() != self.canvas.winfo_width():
@@ -100,6 +113,7 @@ class AlternativesSheet(ttk.Frame):
             image = None
             attr_names = []
             attr_vals = []
+            attr_units = []
             for filename in os.listdir('vehicles/' + vehicle_file):
                 # Get vehicle image and save as ImageTk object
                 if filename.endswith(".jpg") or filename.endswith(".png"):
@@ -114,14 +128,15 @@ class AlternativesSheet(ttk.Frame):
                         vehicle_attrs = [x.strip('/n').replace(' ', '') for x in f.readlines()]
                         attr_names = [attr_line[:attr_line.find("=")] for attr_line in vehicle_attrs]
                         attr_vals = [re.findall(r"[-+]?\d*\.\d+|\d+", attr_line) for attr_line in vehicle_attrs]
-                        print attr_names
-                        print attr_vals
                         for indx, name in enumerate(attr_names):
                             if name == 'video':
                                 has_video = vehicle_attrs[indx][vehicle_attrs[indx].find("=")+1:]
                                 attr_vals[indx] = [has_video]
                         attr_vals = [val for sublist in attr_vals for val in sublist]
-            performance = dict(zip(attr_names, attr_vals))
+                        attr_units = [vehicle_attrs[i].replace(attr_names[i]+"="+attr_vals[i], '').replace('\n', '')
+                                      for i in xrange(len(vehicle_attrs))]
+                        print attr_units
+            performance = dict(zip(attr_names, zip(attr_vals, attr_units)))
             self.alternatives.append(Vehicle(vehicle_name, image, performance))
 
         # Populate alternatives sheet
