@@ -18,6 +18,12 @@ from matplotlib import rcParams
 rcParams.update({'figure.autolayout': True})
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
+from powerfuns import power_models
+from pylab import meshgrid, cm, imshow, contour, clabel, colorbar, axis, title, show
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
+import matplotlib.pyplot as plt
 
 
 class Vehicle(object):
@@ -68,13 +74,26 @@ class Vehicle(object):
         max_range = performance['range']
         max_range_std_val = convert_unit(max_range[0], max_range[1], 'mi')
         video = performance['video']
+        empty_weight = performance['weight']
+        empty_weight_std_val = convert_unit(empty_weight[0], empty_weight[1], 'lbf')
+        try:
+            battery_capacity = performance['battery_capacity']
+            battery_capacity_std_val = convert_unit(battery_capacity[0], battery_capacity[1], 'Wh')
+        except KeyError:
+            battery_capacity = None
 
         self.endurance = {'name': 'endurance', 'value': endurance_std_val, 'unit': 'min'}
         self.payload = {'name': 'payload', 'value': payload_std_val, 'unit': 'lbf'}
         self.build_time = {'name': 'build time', 'value': build_time_std_val, 'unit': 'hr'}
         self.max_range = {'name': 'range', 'value': max_range_std_val, 'unit': 'mi'}
         self.video = {'name': 'video', 'value': video[0], 'unit': video[1]}
-        self.performance = (self.endurance, self.payload, self.build_time, self.max_range, self.video)
+        self.empty_weight = {'name': 'weight', 'value': empty_weight_std_val, 'unit': 'lbf'}
+        if battery_capacity:
+            self.battery_capacity = {'name': 'battery capacity', 'value': battery_capacity_std_val, 'unit': 'Wh'}
+        else:
+            self.battery_capacity = {'name': 'battery capacity', 'value': 'not available', 'unit': ''}
+        self.performance = (self.endurance, self.payload, self.build_time, self.max_range, self.video,
+                            self.empty_weight, self.battery_capacity)
         self.basic_performance = (self.endurance, self.payload, self.build_time, self.video)
 
     def display_frame(self, master):
@@ -205,24 +224,146 @@ class ViewVehiclePerformance(Toplevel):
         Toplevel.__init__(self, master)
         self.master = master
         self.vehicle = vehicle
-        self.title('Vehicle Performance Tradespace')
-
-        # Place window
         xpos, ypos = get_win_place(self)
         self.geometry('+%d+%d' % (xpos, ypos))
+        self.mainframe = ttk.Frame(self)
+        self.mainframe.pack(fill=BOTH, expand=YES)
+        self.title(self.vehicle.name)
 
-        # Create mainframe and subframes
+        if power_models[self.vehicle.name] is None:
+            self.not_avail_label = ttk.Label(self.mainframe, text='Detailed Vehicle Performance Not Available')
+            self.not_avail_label.pack(padx=100, pady=75)
+            self.close_button = ttk.Button(self.mainframe, text='Close', command=self.destroy)
+            self.close_button.pack(side=RIGHT, padx='3 5')
+            self.mainframe.pack()
+        else:
+            # Create subframes
+            self.surfaceplot_frame = SurfacePlot(self.mainframe, self.vehicle)
+            self.tradespace_frame = TradeSpaceFrame(self.mainframe, self.vehicle)
+            self.button_frame = ttk.Frame(self, padding=5)
+
+            # Create button frame widgets
+            self.close_button = ttk.Button(self.button_frame, text='Close', command=self.destroy)
+            self.close_button.pack(side=RIGHT, padx='3 5')
+
+            # Pack stuff
+            self.surfaceplot_frame.pack(side=LEFT, fill=BOTH, expand=1)
+            self.tradespace_frame.pack(side=LEFT, fill=BOTH, expand=0)
+            self.mainframe.pack(fill=BOTH, expand=1)
+            self.button_frame.pack(fill=Y)
+
+
+class TradeSpaceFrame(ttk.Frame):
+    def __init__(self, master, vehicle):
+        ttk.Frame.__init__(self, master, padding=5)
+        self.master = master
+        self.vehicle = vehicle
+        max_payload = self.vehicle.payload['value']    # Maximum payload in lbf
+        self.power_fun = power_models[self.vehicle.name]
+
+        # Create mainframe
         self.mainframe = ttk.Frame(self, padding=5)
-        self.surfaceplot_frame = SurfacePlot(self, self.vehicle)
-        self.button_frame = ttk.Frame(self.mainframe, padding=5)
 
-        # Create button frame widgets
-        self.close_button = ttk.Button(self.button_frame, text='Close', command=self.destroy)
-        self.close_button.pack(side=RIGHT, padx='3 5')
+        # Create payload selection widgets
+        self.payload_label = ttk.Label(self.mainframe, text='Specify Payload', font=('Helvetica', 16))
+        self.payload_label.pack(pady='20 5')
 
+        self.payload_frame = ttk.Frame(self.mainframe)
+
+        self.payload_scale = ttk.Scale(self.payload_frame, orient=HORIZONTAL, length=150, from_=0, to=max_payload,
+                                       command=self.payload_change)
+        self.payload_scale.pack(side=LEFT)
+
+        self.payload_var = StringVar()
+        self.payload_var.set(self.payload_scale.get())
+
+        self.payload_val_label = ttk.Label(self.payload_frame, textvariable=self.payload_var, width=4)
+        self.payload_val_label.pack(side=LEFT, padx=3)
+
+        self.payload_unit_label = ttk.Label(self.payload_frame, text='pounds', font=('Helvetica', 12))
+        self.payload_unit_label.pack(side=LEFT)
+
+        self.payload_frame.pack()
+
+        # Create maximum range widgets
+        self.max_range_label = ttk.Label(self.mainframe, text='Maximum Range', font=('Helvetica', 16))
+        self.max_range_label.pack(pady='40 5')
+
+        self.max_range_frame = ttk.Frame(self.mainframe)
+
+        self.max_range_var = DoubleVar()
+        self.max_range_var.set(0)
+        self.vel_max_range_var = DoubleVar()
+        self.vel_max_range_var.set(0)
+
+        self.max_range_label = ttk.Label(self.max_range_frame, textvariable=self.max_range_var, width=4)
+        self.max_range_label.pack(side=LEFT)
+        self.max_range_unit_label = ttk.Label(self.max_range_frame, text='miles at', font=('Helvetica', 12))
+        self.max_range_unit_label.pack(side=LEFT, padx=5)
+
+        self.vel_max_range_label = ttk.Label(self.max_range_frame, textvariable=self.vel_max_range_var, width=4)
+        self.vel_max_range_label.pack(side=LEFT)
+        self.vel_max_range_unit_label = ttk.Label(self.max_range_frame, text='mph cruise speed', font=('Helvetica', 12))
+        self.vel_max_range_unit_label.pack(side=LEFT, padx='5 0')
+
+        self.max_range_frame.pack()
+
+        # Create maximum endurance widgets
+        self.max_endurance_label = ttk.Label(self.mainframe, text='Maximum Endurance', font=('Helvetica', 16))
+        self.max_endurance_label.pack(pady='40 5')
+
+        self.max_endurance_frame = ttk.Frame(self.mainframe)
+
+        self.max_endurance_var = DoubleVar()
+        self.max_endurance_var.set(0)
+        self.vel_max_endurance_var = DoubleVar()
+        self.vel_max_endurance_var.set(0)
+
+        self.max_endurance_val_label = ttk.Label(self.max_endurance_frame, textvariable=self.max_endurance_var, width=4)
+        self.max_endurance_val_label.pack(side=LEFT)
+        self.max_endurance_unit_label = ttk.Label(self.max_endurance_frame, text='minutes at', font=('Helvetica', 12))
+        self.max_endurance_unit_label.pack(side=LEFT, padx=5)
+
+        self.vel_max_endurance_label = ttk.Label(self.max_endurance_frame, textvariable=self.vel_max_endurance_var,
+                                                 width=4)
+        self.vel_max_endurance_label.pack(side=LEFT)
+        self.vel_max_endurance_unit_label = ttk.Label(self.max_endurance_frame, text='mph cruise speed', font=('Helvetica', 12))
+        self.vel_max_endurance_unit_label.pack(side=LEFT, padx='5 0')
+
+        self.max_endurance_frame.pack()
+
+        # Pack mainframe
         self.mainframe.pack()
-        self.surfaceplot_frame.pack(fill=BOTH, expand=1)
-        self.button_frame.pack(fill=Y, side=RIGHT)
+
+    def payload_change(self, e=None):
+        """
+        Event function that updates the gui when the specified payload is changed via the scale.
+        :param e:
+        :return:
+        """
+        payload_value = self.payload_scale.get()
+        # Update the payload display label
+        value_string = "%0.2f" % payload_value
+        self.payload_var.set(value_string)
+
+        # Calculate power required for max range and endurance for the given payload
+        self.power_fun = power_models[self.vehicle.name]
+        this_mass = convert_unit(payload_value + self.vehicle.empty_weight['value'], 'lbf', 'kg') * 1000
+        power, mm, VV, m, V = self.power_fun(m=this_mass)
+        index_max_range = power.argmin()
+        power_max_range = power[index_max_range]
+        velocity_max_range = VV[index_max_range]
+        index_max_endurance = (power/VV).argmin()
+        power_max_endurance = power[index_max_endurance]
+        velocity_max_endurance = VV[index_max_endurance]
+        max_range = (self.vehicle.battery_capacity['value']/power_max_range) * velocity_max_range * 2.23694    # Max range in miles
+        max_endurance = self.vehicle.battery_capacity['value']/power_max_endurance * 60   # Max endurance in minutes
+
+        self.max_range_var.set("%0.2f" % max_range)
+        self.vel_max_range_var.set("%0.1f" % velocity_max_range)
+
+        self.max_endurance_var.set("%0.1f" % max_endurance)
+        self.vel_max_endurance_var.set("%0.1f" % velocity_max_endurance)
 
 
 class SurfacePlot(ttk.Frame):
@@ -230,9 +371,7 @@ class SurfacePlot(ttk.Frame):
         ttk.Frame.__init__(self, master, padding=5)
         self.master = master
         self.vehicle = vehicle
-        mass = vehicle.mm
-        velocity = vehicle.VV
-        power = vehicle.power
+        self.power_fun = power_models[self.vehicle.name]
 
         # Create plot frame
         self.plot_frame = ttk.Frame(self, padding=5)
@@ -248,13 +387,19 @@ class SurfacePlot(ttk.Frame):
         self.canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
 
         # Plot vehicle information
-        self.surf = self.ax3d.plot_surface(mass, velocity, power, rstride=1, cstride=1, cmap=mpl.cm.RdBu, linewidth=0, antialiased=False)
+        power, mass_range, velocity_range, mm, VV = self.power_fun()    # mass range in grams, vel range in m/s, power in W
+        payload = mass_range - convert_unit(self.vehicle.empty_weight['value'], self.vehicle.empty_weight['unit'], 'kg') * 1000
+        payload[payload<0] = 0
+        payload *= 0.00220462   # convert grams to lbf
+        velocity_range *= 2.23694   # convert m/s to miles per hour
+        self.surf = self.ax3d.plot_surface(payload, velocity_range, power, rstride=1, cstride=1, cmap=mpl.cm.RdBu, linewidth=0, antialiased=False)
 
-        self.ax3d.set_xlabel('Mass (g)')
-        self.ax3d.set_ylabel('Forward Speed (m/s)')
+        self.ax3d.set_xlabel('Payload (lbf)')
+        self.ax3d.set_ylabel('Forward Speed (mph)')
+        self.ax3d.set_zlabel('Power Required (W)')
 
         self.ax3d.zaxis.set_major_locator(LinearLocator(10))
-        self.ax3d.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+        self.ax3d.zaxis.set_major_formatter(FormatStrFormatter('%.0f'))
 
         self.fig.colorbar(self.surf, shrink=0.5, aspect=5)
         self.canvas.show()

@@ -3,3 +3,4 @@ payload = 2.0 lbf
 build_time = 12 hr
 range = 10 mi
 video = True
+weight = 2.404 kg

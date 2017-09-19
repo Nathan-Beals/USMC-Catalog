@@ -25,6 +25,8 @@ def pfun5(m, V):
 m12 = np.linspace(500, 1200, 100)
 V12 = np.linspace(0, 5.5, 100)
 mm12, VV12 = np.meshgrid(m12, V12)
+print type(mm12)
+print mm12
 
 m5 = np.linspace(400, 1000, 700)
 V5 = np.linspace(0, 5.5, 700)

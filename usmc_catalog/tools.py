@@ -10,7 +10,7 @@ def convert_unit(val, unit_start, unit_end, voltage=None):
     weight_per_newton = {'N': 1, 'lbf': 0.2248, 'kg': 1/9.81}
     length_per_meter = {'m': 1, 'cm': 100, 'in': 39.37, 'ft': 3.281, 'km': 0.001, 'mi': 0.000621}
     if voltage is not None:
-        capacity_per_Wh = {'Wh': 1, 'mAh': float(voltage)/1000}
+        capacity_per_Wh = {'Wh': 1, 'mAh': 1000/float(voltage)}
     else:
         capacity_per_Wh = {'mAh': 1, 'Wh': 1}
     density_per_metric = {'kg*m^-3': 1, 'slug*ft^-3': 0.00194, 'lbf*ft^-3': 0.00194/32.2}

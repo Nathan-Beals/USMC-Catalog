@@ -3,3 +3,5 @@ payload = 2.7 N
 build_time = 9 hr
 range = 1.5 km
 video = False
+weight = 1.2765 kg
+battery_capacity = 36.63 Wh
