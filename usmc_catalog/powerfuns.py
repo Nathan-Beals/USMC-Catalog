@@ -16,7 +16,7 @@ def pfun_ODSUASLarge(m=np.linspace(1604, 2167, 100), V=np.linspace(0.1, 5.5, 100
     return P, mm, VV, m, V
 
 
-def pfun_ODSUASSmall(m=np.linspace(1277, 1554, 100), V=np.linspace(0, 5.5, 100)):
+def pfun_ODSUASSmall(m=np.linspace(1277, 1554, 100), V=np.linspace(0.1, 5.5, 100)):
     mm, VV = np.meshgrid(m, V)
     q1 = mm - 1415.60258877997
     q2 = VV - 4.09112359606267
@@ -24,4 +24,5 @@ def pfun_ODSUASSmall(m=np.linspace(1277, 1554, 100), V=np.linspace(0, 5.5, 100))
         0.00098502759429*q1**2 + 0.00442224684513*q1*q2 + 0.59435253538876*q2**2
     return P, mm, VV, m, V
 
-power_models = {'ODSUAS Large': pfun_ODSUASLarge, 'ODSUAS Small': pfun_ODSUASSmall, 'MITRE Nibbler': None}
+power_models = {'ODSUAS Large': pfun_ODSUASLarge, 'ODSUAS Small': pfun_ODSUASSmall, 'MITRE Nibbler': None,
+                'ARDEC Wilbur': None, 'ARDEC Orville': None, 'ARDEC Opus': None, 'ARDEC Amelia': None}

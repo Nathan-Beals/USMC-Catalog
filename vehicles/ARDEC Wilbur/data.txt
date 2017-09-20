@@ -1,0 +1,6 @@
+endurance = 16 min
+payload = 4 lbf
+build_time = 20 min
+range = 2 mi
+video = Yes
+weight = 3.0 lbf

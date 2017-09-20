@@ -170,7 +170,10 @@ class Vehicle(object):
             f = tkFont.Font(attr_name_label, attr_name_label.cget("font"))
             f.configure(underline=True)
             attr_name_label.configure(font=f)
-            attr_val_label = ttk.Label(perf_frame, text=str(attr['value']) + ' ' + str(attr['unit']))
+            if type(attr['value']) is float:
+                attr_val_label = ttk.Label(perf_frame, text="%0.2f" % attr['value'] + ' ' + str(attr['unit']))
+            else:
+                attr_val_label = ttk.Label(perf_frame, text=str(attr['value']) + ' ' + str(attr['unit']))
             attr_name_label.grid(column=column, row=0, padx='0 5')
             attr_val_label.grid(column=column, row=1)
             column += 1
@@ -296,12 +299,12 @@ class TradeSpaceFrame(ttk.Frame):
         self.vel_max_range_var = DoubleVar()
         self.vel_max_range_var.set(0)
 
-        self.max_range_label = ttk.Label(self.max_range_frame, textvariable=self.max_range_var, width=4)
+        self.max_range_label = ttk.Label(self.max_range_frame, textvariable=self.max_range_var, width=3)
         self.max_range_label.pack(side=LEFT)
         self.max_range_unit_label = ttk.Label(self.max_range_frame, text='miles at', font=('Helvetica', 12))
         self.max_range_unit_label.pack(side=LEFT, padx=5)
 
-        self.vel_max_range_label = ttk.Label(self.max_range_frame, textvariable=self.vel_max_range_var, width=4)
+        self.vel_max_range_label = ttk.Label(self.max_range_frame, textvariable=self.vel_max_range_var, width=3)
         self.vel_max_range_label.pack(side=LEFT)
         self.vel_max_range_unit_label = ttk.Label(self.max_range_frame, text='mph cruise speed', font=('Helvetica', 12))
         self.vel_max_range_unit_label.pack(side=LEFT, padx='5 0')
@@ -319,13 +322,13 @@ class TradeSpaceFrame(ttk.Frame):
         self.vel_max_endurance_var = DoubleVar()
         self.vel_max_endurance_var.set(0)
 
-        self.max_endurance_val_label = ttk.Label(self.max_endurance_frame, textvariable=self.max_endurance_var, width=4)
+        self.max_endurance_val_label = ttk.Label(self.max_endurance_frame, textvariable=self.max_endurance_var, width=3)
         self.max_endurance_val_label.pack(side=LEFT)
         self.max_endurance_unit_label = ttk.Label(self.max_endurance_frame, text='minutes at', font=('Helvetica', 12))
         self.max_endurance_unit_label.pack(side=LEFT, padx=5)
 
         self.vel_max_endurance_label = ttk.Label(self.max_endurance_frame, textvariable=self.vel_max_endurance_var,
-                                                 width=4)
+                                                 width=3)
         self.vel_max_endurance_label.pack(side=LEFT)
         self.vel_max_endurance_unit_label = ttk.Label(self.max_endurance_frame, text='mph cruise speed', font=('Helvetica', 12))
         self.vel_max_endurance_unit_label.pack(side=LEFT, padx='5 0')
@@ -363,7 +366,7 @@ class TradeSpaceFrame(ttk.Frame):
         self.vel_max_range_var.set("%0.1f" % velocity_max_range)
 
         self.max_endurance_var.set("%0.1f" % max_endurance)
-        self.vel_max_endurance_var.set("%0.1f" % velocity_max_endurance)
+        self.vel_max_endurance_var.set("%0.1f" % (velocity_max_endurance * 2.23694))
 
 
 class SurfacePlot(ttk.Frame):

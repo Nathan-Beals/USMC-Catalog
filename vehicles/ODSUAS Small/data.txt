@@ -2,6 +2,6 @@ endurance = 15 min
 payload = 2.7 N
 build_time = 9 hr
 range = 1.5 km
-video = False
+video = Yes
 weight = 1.2765 kg
 battery_capacity = 36.63 Wh

@@ -73,9 +73,7 @@ class VertScrolledFrame(ttk.Frame):
             num_rows = num_alts / 2
         else:
             num_rows = (num_alts+1) / 2
-        print self.interior.winfo_reqheight()
         two_row_height = 2 * (self.interior.winfo_reqheight()/num_rows)
-        print two_row_height
         self.canvas.config(height=self.interior.winfo_reqheight())
 
     # track changes to the canvas and frame width and sync them,
@@ -135,7 +133,6 @@ class AlternativesSheet(ttk.Frame):
                         attr_vals = [val for sublist in attr_vals for val in sublist]
                         attr_units = [vehicle_attrs[i].replace(attr_names[i]+"="+attr_vals[i], '').replace('\n', '')
                                       for i in xrange(len(vehicle_attrs))]
-                        print attr_units
             performance = dict(zip(attr_names, zip(attr_vals, attr_units)))
             self.alternatives.append(Vehicle(vehicle_name, image, performance))
 
@@ -202,8 +199,6 @@ class AlternativesSheet(ttk.Frame):
                     filter_val_metric = tools.convert_unit(this_filter[2], this_filter[3], 'std_metric')
                 except tools.ConversionError:
                     filter_val_metric = this_filter[2]
-                print "alternative_attr_val = " + str(alternative_attr_val)
-                print "filter_val_metric = " + str(filter_val_metric)
                 if this_filter[1] == 'min' and not alternative_attr_val >= filter_val_metric:
                     return False
                 elif this_filter[1] == 'max' and not alternative_attr_val <= filter_val_metric:
