@@ -4,26 +4,26 @@ except ImportError:
     from tkinter import *
 import ttk
 import tkFont
-from PIL import ImageTk, Image
+#from PIL import ImageTk, Image
 from winplace import get_win_place
-from collections import OrderedDict
+#from collections import OrderedDict
 from tools import convert_unit
-import numpy as np
+#import numpy as np
 import matplotlib as mpl
 mpl.use('TkAgg')
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib.figure import Figure
-from matplotlib.backend_bases import key_press_handler
+#from matplotlib.backend_bases import key_press_handler
 from matplotlib import rcParams
 rcParams.update({'figure.autolayout': True})
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
+#from mpl_toolkits.mplot3d import Axes3D
+#from matplotlib.ticker import LinearLocator, FormatStrFormatter
 from powerfuns import power_models
-from pylab import meshgrid, cm, imshow, contour, clabel, colorbar, axis, title, show
+#from pylab import meshgrid, cm, imshow, contour, clabel, colorbar, axis, title, show
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 
 class Vehicle(object):
@@ -122,7 +122,7 @@ class Vehicle(object):
             f.configure(underline=True)
             attr_name_label.configure(font=f)
             try:
-                attr_val_label = ttk.Label(perf_frame, text="%.2f" % attr['value']+' '+attr['unit'])
+                attr_val_label = ttk.Label(perf_frame, text="%.1f" % attr['value']+' '+attr['unit'])
             except TypeError:
                 attr_val_label = ttk.Label(perf_frame, text=str(attr['value'])+' '+attr['unit'])
             attr_name_label.grid(column=0, row=row, sticky=W)
@@ -180,11 +180,6 @@ class Vehicle(object):
 
         # Create label with vehicle image
         image_label = ttk.Label(mainframe, image=self.image)
-
-        # # Grid stuff
-        # vehicle_name.grid(column=0, columnspan=2, row=0, pady=10)
-        # image_label.grid(column=0, row=1, padx='5', pady='0 10')
-        # perf_frame.grid(column=1, row=1, padx='0 5', pady='0 10')
 
         vehicle_name.pack()
         image_label.pack()
@@ -299,12 +294,12 @@ class TradeSpaceFrame(ttk.Frame):
         self.vel_max_range_var = DoubleVar()
         self.vel_max_range_var.set(0)
 
-        self.max_range_label = ttk.Label(self.max_range_frame, textvariable=self.max_range_var, width=3)
+        self.max_range_label = ttk.Label(self.max_range_frame, textvariable=self.max_range_var, width=4)
         self.max_range_label.pack(side=LEFT)
         self.max_range_unit_label = ttk.Label(self.max_range_frame, text='miles at', font=('Helvetica', 12))
         self.max_range_unit_label.pack(side=LEFT, padx=5)
 
-        self.vel_max_range_label = ttk.Label(self.max_range_frame, textvariable=self.vel_max_range_var, width=3)
+        self.vel_max_range_label = ttk.Label(self.max_range_frame, textvariable=self.vel_max_range_var, width=4)
         self.vel_max_range_label.pack(side=LEFT)
         self.vel_max_range_unit_label = ttk.Label(self.max_range_frame, text='mph cruise speed', font=('Helvetica', 12))
         self.vel_max_range_unit_label.pack(side=LEFT, padx='5 0')
@@ -322,13 +317,13 @@ class TradeSpaceFrame(ttk.Frame):
         self.vel_max_endurance_var = DoubleVar()
         self.vel_max_endurance_var.set(0)
 
-        self.max_endurance_val_label = ttk.Label(self.max_endurance_frame, textvariable=self.max_endurance_var, width=3)
+        self.max_endurance_val_label = ttk.Label(self.max_endurance_frame, textvariable=self.max_endurance_var, width=4)
         self.max_endurance_val_label.pack(side=LEFT)
         self.max_endurance_unit_label = ttk.Label(self.max_endurance_frame, text='minutes at', font=('Helvetica', 12))
         self.max_endurance_unit_label.pack(side=LEFT, padx=5)
 
         self.vel_max_endurance_label = ttk.Label(self.max_endurance_frame, textvariable=self.vel_max_endurance_var,
-                                                 width=3)
+                                                 width=4)
         self.vel_max_endurance_label.pack(side=LEFT)
         self.vel_max_endurance_unit_label = ttk.Label(self.max_endurance_frame, text='mph cruise speed', font=('Helvetica', 12))
         self.vel_max_endurance_unit_label.pack(side=LEFT, padx='5 0')
@@ -353,12 +348,12 @@ class TradeSpaceFrame(ttk.Frame):
         self.power_fun = power_models[self.vehicle.name]
         this_mass = convert_unit(payload_value + self.vehicle.empty_weight['value'], 'lbf', 'kg') * 1000
         power, mm, VV, m, V = self.power_fun(m=this_mass)
-        index_max_range = power.argmin()
-        power_max_range = power[index_max_range]
-        velocity_max_range = VV[index_max_range]
-        index_max_endurance = (power/VV).argmin()
+        index_max_endurance = power.argmin()
         power_max_endurance = power[index_max_endurance]
         velocity_max_endurance = VV[index_max_endurance]
+        index_max_range = (power/VV).argmin()
+        power_max_range = power[index_max_range]
+        velocity_max_range = VV[index_max_range]
         max_range = (self.vehicle.battery_capacity['value']/power_max_range) * velocity_max_range * 2.23694    # Max range in miles
         max_endurance = self.vehicle.battery_capacity['value']/power_max_endurance * 60   # Max endurance in minutes
 
