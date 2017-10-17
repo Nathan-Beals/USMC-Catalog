@@ -284,6 +284,7 @@ class FilterControls(ttk.Frame):
             this_filter = (filter_attr, minormax, attr_val, attr_unit)
         self.master.active_filter_frame.set_filter(this_filter)
 
+
     def set_sortby_attr(self, event=None):
         self.sortby_attr = \
             Vehicle.filterby_real_attr_names[Vehicle.filterby_pretty_attr_names.index(self.sortby_combobox.get())]
